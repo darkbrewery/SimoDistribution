@@ -1,0 +1,19 @@
+version: '3'
+services:
+  payment-distributor-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mount the current directory to /app in the container
+      - .:/app
+      # Mount the Solana config directory to persist wallet information
+      - ${HOME}/.config/solana:/root/.config/solana
+    environment:
+      # Pass environment variables to the container
+      - ANCHOR_WALLET=/root/.config/solana/id.json
+      - SOLANA_NETWORK=devnet
+    # Override the entrypoint to allow for custom commands
+    entrypoint: /bin/bash
+    # Keep the container running
+    tty: true

@@ -1,0 +1,23 @@
+[package]
+name = "payment-distributor"
+version = "0.1.0"
+description = "Payment distribution smart contract for Solana"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "payment_distributor"
+path = "src/lib.rs"
+
+[dependencies]
+solana-program = "=1.18.26"  # Pinned exact version
+
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = "fat"         # Full link-time optimization
+codegen-units = 1   # Minimize codegen units for reproducibility
+panic = "abort"     # Remove unwinding
+strip = true        # Strip symbols
+overflow-checks = true
+incremental = false # Ensure full rebuild
+debug = false       # No debug info
