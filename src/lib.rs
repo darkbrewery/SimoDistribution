@@ -9,8 +9,12 @@ use solana_program::{
     program_error::ProgramError,
 };
 
+// Only include security_txt if not disabling the entrypoint
+#[cfg(not(feature = "no-entrypoint"))]
+use solana_security_txt::security_txt;
+
 // Program ID - new ID from the generated keypair
-solana_program::declare_id!("8axD1T5opB5hhfPGKz5k7JFU3Xptuc77rK6nhK6BmUFH");
+solana_program::declare_id!("DEQ3yVcLRNRfQboh3gFzeafLJBmjrwkcAcKnzajWmin3");
 
 // Constants as u8 to save space
 const TREASURY_PCT: u8 = 50;
@@ -21,6 +25,20 @@ const SECOND_REF_MAX: u64 = 50_000_000;
 
 // Use the entrypoint! macro instead of manual entrypoint
 solana_program::entrypoint!(process_instruction);
+
+#[cfg(not(feature = "no-entrypoint"))]
+security_txt! {
+    // Required fields
+    name: "Project Simo Distribution",
+    project_url: "https://projectsimo.io",
+    contacts: "discord:https://discord.gg/AFg9HAdM",
+    policy: "https://projectsimo.io/security-policy",
+    
+    // Optional fields
+    preferred_languages: "en",
+    source_code: "https://github.com/darkbrewery/SimoDistribution",
+    acknowledgements: "Thanks to Neodyme for security tools"
+}
 
 // Add inline attribute to encourage compiler to inline this function
 #[inline]
@@ -101,6 +119,7 @@ fn process_instruction(
     
     Ok(())
 }
+
 
 
 
