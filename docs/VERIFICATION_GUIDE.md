@@ -67,8 +67,10 @@ The verification process runs inside a Docker container, which ensures compatibi
 For official verification that appears in Solana Explorer and other tools, use the remote verification option:
 
 ```powershell
-./verify-contract.ps1 -Remote -RepoUrl https://github.com/darkbrewery/SimoDistribution
+./verify-contract.ps1 -Network devnet -RepoUrl https://github.com/darkbrewery/SimoDistribution -Remote -Airdrop
 ```
+
+The `-Airdrop` flag ensures your fee payer account has enough SOL to pay for the verification transaction. This is important because remote verification requires submitting a transaction to the Solana blockchain, which incurs a small fee.
 
 This submits a verification request to the OtterSec API, which triggers a remote build of your program and verifies it against the on-chain program. The remote verification will make your program appear as verified in Solana Explorer, SolanaFM, and other tools.
 
@@ -78,11 +80,14 @@ The verification script supports several options:
 
 - `-Network`: Solana network to use (default: devnet)
 - `-ProgramKeypairPath`: Path to program keypair (default: keypairs/program-keypair.json)
+- `-FeePayerKeypairPath`: Path to fee payer keypair (default: keypairs/fee-payer.json)
 - `-ProgramBinaryPath`: Path to program binary (default: target/deploy/payment_distributor.so)
 - `-RepoUrl`: URL of the GitHub repository
 - `-CommitHash`: Specific commit hash to verify against (optional)
 - `-LibraryName`: Library name in Cargo.toml (default: payment_distributor)
 - `-Remote`: Use remote verification via OtterSec API
+- `-Airdrop`: Request an airdrop of SOL for the fee payer (useful for devnet/testnet)
+- `-AirdropAmount`: Amount of SOL to airdrop (default: 1.0)
 
 ## Troubleshooting
 
@@ -101,6 +106,16 @@ If remote verification fails:
 1. **Repository access**: Ensure your repository is public
 2. **Build issues**: Check if your code builds successfully in a clean environment
 3. **Dependencies**: Ensure all dependencies are properly specified in Cargo.toml and Cargo.lock
+4. **Fee payer balance**: Ensure your fee payer account has enough SOL (use the `-Airdrop` flag on devnet/testnet)
+5. **Fee payer permissions**: Ensure your fee payer keypair is valid and has the necessary permissions
+
+### Fee Payer Issues
+
+For remote verification, you need a funded fee payer account:
+
+1. **Create a fee payer**: If you don't have a fee payer keypair, create one with `solana-keygen new -o keypairs/fee-payer.json`
+2. **Fund the account**: On mainnet, transfer SOL to the fee payer. On devnet/testnet, use the `-Airdrop` flag
+3. **Check balance**: Verify the fee payer has enough SOL with `solana balance -k keypairs/fee-payer.json`
 
 ## Resources
 
