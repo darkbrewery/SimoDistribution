@@ -177,7 +177,8 @@ name = "payment_distributor"
 path = "src/lib.rs"
 
 [dependencies]
-solana-program = "~2.0"  # Compatible with 2.x versions (Anza Agave era)
+solana-program = "2.2.0"  # Match your stable CLI version
+solana-security-txt = "1.1.1"  # Latest stable version
 
 [profile.release]
 opt-level = "z"
