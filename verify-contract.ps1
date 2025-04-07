@@ -69,7 +69,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Rust with a specific version
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.80.1
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.81.0
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install Solana CLI and toolchain - pinned to version 1.18.26
@@ -77,8 +77,8 @@ RUN sh -c "$(curl -sSfL https://release.solana.com/v1.18.26/install)" && \
     /root/.local/share/solana/install/active_release/bin/solana-install init 1.18.26
 ENV PATH="/root/.local/share/solana/install/active_release/bin:${PATH}"
 
-# Install solana-verify
-RUN cargo install solana-verify
+# Install solana-verify with --locked flag
+RUN cargo install solana-verify --locked
 
 # Keep container running
 CMD ["tail", "-f", "/dev/null"]
