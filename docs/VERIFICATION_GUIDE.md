@@ -19,15 +19,15 @@ The verification process involves comparing the hash of the on-chain program wit
 
 Before verifying your smart contract, ensure you have:
 
-1. **Docker**: Required for deterministic builds
-2. **Rust and Cargo**: Required for building and installing the verification tools
-3. **Solana CLI**: Required for interacting with the Solana network
-4. **solana-verify CLI**: The primary tool for verification (our script will help install this)
-5. **A public GitHub repository**: Your code must be in a public repository for verification
+1. **Docker**: Required for deterministic builds and verification (on Windows)
+2. **Solana CLI**: Required for interacting with the Solana network
+3. **A public GitHub repository**: Your code must be in a public repository for verification
+
+> **Note for Windows Users**: The `solana-verify` CLI tool has compatibility issues on Windows. Our verification script uses Docker to run the verification process in a Linux container, which avoids these issues.
 
 ## Verification Process
 
-Our project includes a verification script (`verify-contract.ps1`) that automates the verification process. Here's how it works:
+Our project includes a verification script (`verify-contract.ps1`) that automates the verification process using Docker. Here's how it works:
 
 ### 1. Build the Contract
 
@@ -37,7 +37,7 @@ First, build your contract using our verifiable build script:
 ./docker-build-verifiable.ps1 build
 ```
 
-This creates a deterministic build of your smart contract.
+This creates a deterministic build of your smart contract and generates the necessary keypairs.
 
 ### 2. Deploy the Contract
 
@@ -52,23 +52,25 @@ Deploy your contract to the Solana network:
 Run the verification script:
 
 ```powershell
-./verify-contract.ps1 -Network devnet -RepoUrl https://github.com/yourusername/SimoDistribution
+./verify-contract.ps1 -Network devnet -RepoUrl https://github.com/darkbrewery/SimoDistribution
 ```
 
 The script will:
-- Check if the `solana-verify` CLI is installed
+- Create a Docker container with the Solana toolchain and solana-verify CLI
 - Verify the on-chain program hash matches your local build
 - Verify your program against your GitHub repository
+
+The verification process runs inside a Docker container, which ensures compatibility across different operating systems, especially Windows.
 
 ### 4. Remote Verification (Optional)
 
 For official verification that appears in Solana Explorer and other tools, use the remote verification option:
 
 ```powershell
-./verify-contract.ps1 -Remote
+./verify-contract.ps1 -Remote -RepoUrl https://github.com/darkbrewery/SimoDistribution
 ```
 
-This submits a verification request to the OtterSec API, which triggers a remote build of your program and verifies it against the on-chain program.
+This submits a verification request to the OtterSec API, which triggers a remote build of your program and verifies it against the on-chain program. The remote verification will make your program appear as verified in Solana Explorer, SolanaFM, and other tools.
 
 ## Verification Options
 

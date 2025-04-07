@@ -121,18 +121,20 @@ After deploying your smart contract, you can verify it using the official Solana
 
 ### Using the Verification Script
 
-We've provided a verification script that automates the process:
+We've provided a Docker-based verification script that works on Windows:
 
 ```powershell
 # Basic verification on devnet
-./verify-contract.ps1
+./verify-contract.ps1 -RepoUrl https://github.com/darkbrewery/SimoDistribution
 
 # Verification with specific options
-./verify-contract.ps1 -Network mainnet -RepoUrl https://github.com/yourusername/SimoDistribution -CommitHash abc123
+./verify-contract.ps1 -Network mainnet -RepoUrl https://github.com/darkbrewery/SimoDistribution -CommitHash abc123
 
-# Remote verification via OtterSec API
-./verify-contract.ps1 -Remote
+# Remote verification via OtterSec API (appears in Solana Explorer)
+./verify-contract.ps1 -Remote -RepoUrl https://github.com/darkbrewery/SimoDistribution
 ```
+
+> **Note**: The verification script uses Docker to run the verification process in a Linux container, which ensures compatibility on Windows systems.
 
 ### Verification Process
 
