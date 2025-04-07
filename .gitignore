@@ -5,6 +5,13 @@ target/
 *.d
 *.o
 *.a
+*.bin
+program.bin
+src_contract.rs
+
+# Rust specific
+.rustc_info.json
+Cargo.lock
 
 # Keypairs and sensitive files
 *.json
