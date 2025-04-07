@@ -127,21 +127,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "Smart contract deployed successfully to $programId" -ForegroundColor Green
 
-# Finalize the program to make it non-upgradeable
-Write-Host "Step 7: Finalizing program to remove upgrade authority"
-$finalizeCommand = "solana program set-upgrade-authority $programId --keypair $ProgramKeypairPath --new-upgrade-authority '' --final"
-Write-Host "Executing: $finalizeCommand"
-Invoke-Expression $finalizeCommand
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Failed to finalize program" -ForegroundColor Red
-    exit 1
-}
-Write-Host "Program finalized successfully. It is now non-upgradeable." -ForegroundColor Green
+# Note: Finalization is now handled by a separate script
+Write-Host "Note: To finalize the program and make it non-upgradeable, run the finalize-program.ps1 script." -ForegroundColor Yellow
 
-# Verify deployment and immutability
-Write-Host "Step 8: Verifying deployment and immutability"
+# Verify deployment
+Write-Host "Step 7: Verifying deployment"
 solana program show $programId
-Write-Host "Check Solana Explorer for 'Upgrade Authority: None' at: https://explorer.solana.com/address/$programId?cluster=$Network"
+Write-Host "Check Solana Explorer at: https://explorer.solana.com/address/$programId?cluster=$Network"
 
 # Deployment summary
 Write-Host "Deployment Summary:"
@@ -151,6 +143,7 @@ Write-Host "Fee Payer: $feePayerAddress"
 
 Write-Host "Next Steps:"
 Write-Host "1. Verify deployment details with: solana program show $programId"
-Write-Host "2. Test the smart contract with: node scripts/manual-test.js"
-Write-Host "3. Verify immutability on Solana Explorer"
-Write-Host "4. Update client configurations with Program ID: $programId"
+Write-Host "2. Finalize the program with: ./finalize-program.ps1"
+Write-Host "3. Test the smart contract with: node scripts/manual-test.js"
+Write-Host "4. Verify on Solana Explorer"
+Write-Host "5. Update client configurations with Program ID: $programId"
