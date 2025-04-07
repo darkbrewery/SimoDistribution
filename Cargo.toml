@@ -10,7 +10,7 @@ name = "payment_distributor"
 path = "src/lib.rs"
 
 [dependencies]
-solana-program = "=1.18.26"  # Exact version for reproducibility
+solana-program = "~2.0"  # Compatible with 2.x versions (Anza Agave era)
 
 [profile.release]
 opt-level = "z"

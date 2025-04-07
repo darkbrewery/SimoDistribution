@@ -67,7 +67,7 @@ WORKDIR /app
 
 # Install basic dependencies
 RUN apt-get update && \
-    apt-get install -y build-essential pkg-config libssl-dev libudev-dev git curl binutils && \
+    apt-get install -y build-essential pkg-config libssl-dev libudev-dev git curl binutils ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -75,10 +75,11 @@ RUN apt-get update && \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.81.0
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Install Solana CLI and toolchain - pinned to version 1.18.26
-RUN sh -c "$(curl -sSfL https://release.solana.com/v1.18.26/install)" && \
-    /root/.local/share/solana/install/active_release/bin/solana-install init 1.18.26
+# Install Solana CLI and toolchain - using Anza stable channel (latest stable version)
+# Split into two commands to ensure PATH is updated before running solana-install
+RUN sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
 ENV PATH="/root/.local/share/solana/install/active_release/bin:${PATH}"
+RUN solana --version
 
 # Install solana-verify with --locked flag
 RUN cargo install solana-verify --locked

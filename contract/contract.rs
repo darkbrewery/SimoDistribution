@@ -10,7 +10,7 @@ use solana_program::{
 };
 
 // Program ID - new ID from the generated keypair
-solana_program::declare_id!("9eTnS2cYd1mxFvtsm76Hd24Rt5KFdnLQn9zJo9b3jxeT");
+solana_program::declare_id!("8axD1T5opB5hhfPGKz5k7JFU3Xptuc77rK6nhK6BmUFH");
 
 // Constants as u8 to save space
 const TREASURY_PCT: u8 = 50;
@@ -101,5 +101,7 @@ fn process_instruction(
     
     Ok(())
 }
+
+
 
 

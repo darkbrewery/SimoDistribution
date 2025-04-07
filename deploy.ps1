@@ -116,22 +116,50 @@ if (Test-Path $contractRsPath) {
     exit 1
 }
 
-# Deploy the program
-Write-Host "Step 6: Deploying the smart contract"
+# Check available flags for non-upgradeable deployment
+Write-Host "Step 6: Checking available flags for non-upgradeable deployment"
+$helpOutput = solana program deploy --help
+$nonUpgradeableFlag = ""
+
+# Check for different possible flags
+if ($helpOutput -match "--use-non-upgradeable-loader") {
+    $nonUpgradeableFlag = "--use-non-upgradeable-loader"
+} elseif ($helpOutput -match "--final") {
+    $nonUpgradeableFlag = "--final"
+} elseif ($helpOutput -match "--immutable") {
+    $nonUpgradeableFlag = "--immutable"
+} elseif ($helpOutput -match "--loader BPFLoader") {
+    $nonUpgradeableFlag = "--loader BPFLoader2111111111111111111111111111111111"
+}
+
+# Deploy the program as non-upgradeable if possible
+Write-Host "Step 7: Deploying the smart contract"
 $deployCommand = "solana program deploy --program-id $ProgramKeypairPath --keypair $FeePayerPath $ProgramBinaryPath"
+if ($nonUpgradeableFlag) {
+    $deployCommand += " $nonUpgradeableFlag"
+    Write-Host "Using non-upgradeable flag: $nonUpgradeableFlag" -ForegroundColor Green
+} else {
+    Write-Host "No non-upgradeable flag found. Deploying as upgradeable." -ForegroundColor Yellow
+    Write-Host "You will need to run finalize-program.ps1 after deployment to make it non-upgradeable." -ForegroundColor Yellow
+}
+
 Write-Host "Executing: $deployCommand"
 Invoke-Expression $deployCommand
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Deployment failed" -ForegroundColor Red
     exit 1
 }
-Write-Host "Smart contract deployed successfully to $programId" -ForegroundColor Green
+Write-Host "Smart contract deployed as non-upgradeable to $programId" -ForegroundColor Green
 
-# Note: Finalization is now handled by a separate script
-Write-Host "Note: To finalize the program and make it non-upgradeable, run the finalize-program.ps1 script." -ForegroundColor Yellow
+# Note about deployment type
+if ($nonUpgradeableFlag) {
+    Write-Host "Note: The program is deployed as non-upgradeable using the $nonUpgradeableFlag flag." -ForegroundColor Green
+} else {
+    Write-Host "Note: The program is deployed as upgradeable. Run finalize-program.ps1 to make it non-upgradeable." -ForegroundColor Yellow
+}
 
 # Verify deployment
-Write-Host "Step 7: Verifying deployment"
+Write-Host "Step 8: Verifying deployment"
 solana program show $programId
 Write-Host "Check Solana Explorer at: https://explorer.solana.com/address/$programId?cluster=$Network"
 
@@ -140,10 +168,17 @@ Write-Host "Deployment Summary:"
 Write-Host "Network: $Network"
 Write-Host "Program ID: $programId"
 Write-Host "Fee Payer: $feePayerAddress"
+Write-Host "Deployment Type: $(if ($nonUpgradeableFlag) { "Non-upgradeable" } else { "Upgradeable" })"
 
 Write-Host "Next Steps:"
 Write-Host "1. Verify deployment details with: solana program show $programId"
-Write-Host "2. Finalize the program with: ./finalize-program.ps1"
-Write-Host "3. Test the smart contract with: node scripts/manual-test.js"
-Write-Host "4. Verify on Solana Explorer"
-Write-Host "5. Update client configurations with Program ID: $programId"
+if (-not $nonUpgradeableFlag) {
+    Write-Host "2. Finalize the program with: ./finalize-program.ps1"
+    Write-Host "3. Test the smart contract with: node scripts/manual-test.js"
+    Write-Host "4. Verify on Solana Explorer"
+    Write-Host "5. Update client configurations with Program ID: $programId"
+} else {
+    Write-Host "2. Test the smart contract with: node scripts/manual-test.js"
+    Write-Host "3. Verify on Solana Explorer"
+    Write-Host "4. Update client configurations with Program ID: $programId"
+}

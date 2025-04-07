@@ -40,7 +40,7 @@ WORKDIR /app
 
 # Install basic dependencies
 RUN apt-get update && \
-    apt-get install -y build-essential pkg-config libssl-dev libudev-dev git curl binutils && \
+    apt-get install -y build-essential pkg-config libssl-dev libudev-dev git curl binutils ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -48,10 +48,11 @@ RUN apt-get update && \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.81.0
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Install Solana CLI and toolchain - pinned to version 1.18.26
-RUN sh -c "$(curl -sSfL https://release.solana.com/v1.18.26/install)" && \
-    /root/.local/share/solana/install/active_release/bin/solana-install init 1.18.26
+# Install Solana CLI and toolchain - using Anza stable channel (latest stable version)
+# Split into two commands to ensure PATH is updated before running solana-install
+RUN sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
 ENV PATH="/root/.local/share/solana/install/active_release/bin:${PATH}"
+RUN solana --version
 
 # Keep container running
 CMD ["tail", "-f", "/dev/null"]
@@ -91,11 +92,17 @@ function Build-SmartContract {
     }
     
     if ($ReuseKeypair -and (Test-Path $ProgramKeypairPath)) {
-        Write-Host "Reusing existing program keypair at $ProgramKeypairPath"
+        Write-Host "Reusing existing program keypair at $ProgramKeypairPath" -ForegroundColor Yellow
     } else {
-        Write-Host "Generating new program keypair at $ProgramKeypairPath"
+        # If the keypair exists and we're not explicitly reusing it, remove it first
+        if (Test-Path $ProgramKeypairPath) {
+            Write-Host "Removing existing program keypair at $ProgramKeypairPath" -ForegroundColor Yellow
+            Remove-Item $ProgramKeypairPath -Force
+        }
+        
+        Write-Host "Generating new program keypair at $ProgramKeypairPath" -ForegroundColor Green
         solana-keygen new --no-passphrase -o $ProgramKeypairPath
-        Write-Host "Generated new program keypair"
+        Write-Host "Generated new program keypair" -ForegroundColor Green
     }
     
     # Get the program ID
@@ -170,7 +177,7 @@ name = "payment_distributor"
 path = "src/lib.rs"
 
 [dependencies]
-solana-program = "=1.18.26"  # Exact version for reproducibility
+solana-program = "~2.0"  # Compatible with 2.x versions (Anza Agave era)
 
 [profile.release]
 opt-level = "z"
