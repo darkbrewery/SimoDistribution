@@ -62,25 +62,20 @@ if ($Airdrop -and $Network -ne "mainnet") {
         $newBalance = solana balance $feePayerAddress
         Write-Host "New fee payer balance: $newBalance"
         
-        # Extract numeric balance for comparison
         $balanceValue = [decimal]($newBalance -replace '[^0-9.]', '')
-        
         if ($balanceValue -lt 0.5) {
             Write-Host "WARNING: Fee payer balance is low ($balanceValue SOL). Deployment may fail." -ForegroundColor Yellow
             Write-Host "Consider funding the fee payer account manually or trying the airdrop again." -ForegroundColor Yellow
-            
             $proceed = Read-Host "Do you want to proceed with deployment anyway? (y/n)"
             if ($proceed -ne "y") {
                 Write-Host "Deployment cancelled by user." -ForegroundColor Yellow
                 exit 0
             }
         }
-    }
-    catch {
+    } catch {
         Write-Host "WARNING: Airdrop failed. This is common on busy networks." -ForegroundColor Yellow
         Write-Host "Error details: $_" -ForegroundColor Yellow
         Write-Host "Current fee payer balance: $(solana balance $feePayerAddress)" -ForegroundColor Yellow
-        
         $proceed = Read-Host "Do you want to proceed with deployment anyway? (y/n)"
         if ($proceed -ne "y") {
             Write-Host "Deployment cancelled by user." -ForegroundColor Yellow
@@ -92,14 +87,10 @@ if ($Airdrop -and $Network -ne "mainnet") {
 # Verify program ID in contract matches keypair
 Write-Host "Step 5: Verifying program ID in contract"
 $contractRsPath = "contract/contract.rs"
-
 if (Test-Path $contractRsPath) {
     $contractRsContent = Get-Content $contractRsPath -Raw
-    
-    # Simple string extraction without regex
     $programIdStart = 'declare_id!("'
     $programIdEnd = '")'
-    
     $startPos = $contractRsContent.IndexOf($programIdStart)
     if ($startPos -ge 0) {
         $startPos += $programIdStart.Length
@@ -107,7 +98,6 @@ if (Test-Path $contractRsPath) {
         if ($endPos -ge 0) {
             $contractProgramId = $contractRsContent.Substring($startPos, $endPos - $startPos)
             Write-Host "Program ID in contract.rs: $contractProgramId"
-            
             if ($contractProgramId -ne $programId) {
                 Write-Host "ERROR: Program ID in contract ($contractProgramId) does not match keypair ($programId)" -ForegroundColor Red
                 Write-Host "Please rebuild the contract with the correct program ID." -ForegroundColor Red
@@ -126,29 +116,41 @@ if (Test-Path $contractRsPath) {
     exit 1
 }
 
-# Skip building the contract as it should have been built already
-Write-Host "Step 6: Skipping build as it should have been done separately"
-Write-Host "If you need to build the contract, run: .\docker-build-verifiable.ps1 build"
-
 # Deploy the program
-Write-Host "Step 7: Deploying the smart contract"
+Write-Host "Step 6: Deploying the smart contract"
 $deployCommand = "solana program deploy --program-id $ProgramKeypairPath --keypair $FeePayerPath $ProgramBinaryPath"
 Write-Host "Executing: $deployCommand"
 Invoke-Expression $deployCommand
-Write-Host "Smart contract deployed successfully to $programId"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: Deployment failed" -ForegroundColor Red
+    exit 1
+}
+Write-Host "Smart contract deployed successfully to $programId" -ForegroundColor Green
 
-# Provide next steps
+# Finalize the program to make it non-upgradeable
+Write-Host "Step 7: Finalizing program to remove upgrade authority"
+$finalizeCommand = "solana program set-upgrade-authority $programId --keypair $ProgramKeypairPath --new-upgrade-authority '' --final"
+Write-Host "Executing: $finalizeCommand"
+Invoke-Expression $finalizeCommand
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: Failed to finalize program" -ForegroundColor Red
+    exit 1
+}
+Write-Host "Program finalized successfully. It is now non-upgradeable." -ForegroundColor Green
+
+# Verify deployment and immutability
+Write-Host "Step 8: Verifying deployment and immutability"
+solana program show $programId
+Write-Host "Check Solana Explorer for 'Upgrade Authority: None' at: https://explorer.solana.com/address/$programId?cluster=$Network"
+
+# Deployment summary
 Write-Host "Deployment Summary:"
 Write-Host "Network: $Network"
 Write-Host "Program ID: $programId"
 Write-Host "Fee Payer: $feePayerAddress"
 
 Write-Host "Next Steps:"
-Write-Host "1. Verify the deployment with:"
-Write-Host "   solana program show $programId"
-Write-Host ""
-Write-Host "2. Test the smart contract with:"
-Write-Host "   node scripts/manual-test.js"
-Write-Host ""
-Write-Host "3. Update any client configurations to use this program ID:"
-Write-Host "   $programId"
+Write-Host "1. Verify deployment details with: solana program show $programId"
+Write-Host "2. Test the smart contract with: node scripts/manual-test.js"
+Write-Host "3. Verify immutability on Solana Explorer"
+Write-Host "4. Update client configurations with Program ID: $programId"
