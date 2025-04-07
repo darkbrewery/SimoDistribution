@@ -148,7 +148,39 @@ function Verify-Program {
     # For remote verification, we'll use the OtterSec API directly
     if ($Remote) {
         Write-Host "Using remote verification via OtterSec API..."
-        $verifyCommand = "docker exec -t payment-distributor-verifier bash -c 'cd /app && solana-verify verify-from-repo -u $endpoint --program-id $programId $RepoUrl --library-name $LibraryName --remote'"
+        
+        # Create Solana config directory and file in the Docker container
+        Write-Host "Creating Solana configuration in Docker container..."
+        docker exec -t payment-distributor-verifier bash -c "mkdir -p /root/.config/solana/cli"
+        
+        # Create a proper Solana config file
+        $configContent = @"
+---
+json_rpc_url: "$endpoint"
+websocket_url: ""
+keypair_path: "/app/keypairs/program-keypair.json"
+commitment: "confirmed"
+"@
+        
+        # Write the config content to a temporary file
+        $tempConfigPath = [System.IO.Path]::GetTempFileName()
+        $configContent | Set-Content $tempConfigPath -Encoding ASCII
+        
+        # Copy the config file to the Docker container
+        docker cp $tempConfigPath payment-distributor-verifier:/root/.config/solana/cli/config.yml
+        Remove-Item $tempConfigPath
+        
+        # Copy the program keypair to the Docker container
+        Write-Host "Copying program keypair to Docker container..."
+        docker exec -t payment-distributor-verifier bash -c "mkdir -p /app/keypairs"
+        docker cp $ProgramKeypairPath payment-distributor-verifier:/app/keypairs/program-keypair.json
+        
+        # Set up the Solana CLI configuration in the Docker container
+        Write-Host "Setting up Solana CLI configuration in Docker container..."
+        docker exec -t payment-distributor-verifier bash -c "solana config set -u $endpoint"
+        
+        # Run the verification command with verbose output
+        $verifyCommand = "docker exec -t payment-distributor-verifier bash -c 'cd /app && echo y | RUST_BACKTRACE=1 solana-verify verify-from-repo -u $endpoint --program-id $programId $RepoUrl --library-name $LibraryName --remote'"
         
         if ($CommitHash) {
             $verifyCommand += " --commit-hash $CommitHash"
@@ -158,8 +190,6 @@ function Verify-Program {
         Write-Host "Using local verification..."
         $verifyCommand = "docker exec -t payment-distributor-verifier bash -c 'cd /app && solana program dump $programId -u $endpoint program.bin && sha256sum program.bin && sha256sum $ProgramBinaryPath'"
     }
-    
-    $verifyCommand += "'"
     
     Write-Host "Executing: $verifyCommand"
     Invoke-Expression $verifyCommand
