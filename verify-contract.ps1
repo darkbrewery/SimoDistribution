@@ -5,11 +5,14 @@
 param (
     [string]$Network = "devnet",
     [string]$ProgramKeypairPath = "keypairs/program-keypair.json",
+    [string]$FeePayerKeypairPath = "keypairs/fee-payer.json",
     [string]$ProgramBinaryPath = "target/deploy/payment_distributor.so",
     [string]$RepoUrl = "https://github.com/darkbrewery/SimoDistribution",
     [string]$CommitHash = "",
     [string]$LibraryName = "payment_distributor",
-    [switch]$Remote
+    [switch]$Remote,
+    [switch]$Airdrop,
+    [double]$AirdropAmount = 1.0
 )
 
 # Set the current directory to the script directory
@@ -158,7 +161,7 @@ function Verify-Program {
 ---
 json_rpc_url: "$endpoint"
 websocket_url: ""
-keypair_path: "/app/keypairs/program-keypair.json"
+keypair_path: "/app/keypairs/fee-payer.json"
 commitment: "confirmed"
 "@
         
@@ -170,17 +173,52 @@ commitment: "confirmed"
         docker cp $tempConfigPath payment-distributor-verifier:/root/.config/solana/cli/config.yml
         Remove-Item $tempConfigPath
         
-        # Copy the program keypair to the Docker container
-        Write-Host "Copying program keypair to Docker container..."
+        # Copy the keypairs to the Docker container
+        Write-Host "Copying keypairs to Docker container..."
         docker exec -t payment-distributor-verifier bash -c "mkdir -p /app/keypairs"
         docker cp $ProgramKeypairPath payment-distributor-verifier:/app/keypairs/program-keypair.json
+        docker cp $FeePayerKeypairPath payment-distributor-verifier:/app/keypairs/fee-payer.json
         
         # Set up the Solana CLI configuration in the Docker container
         Write-Host "Setting up Solana CLI configuration in Docker container..."
-        docker exec -t payment-distributor-verifier bash -c "solana config set -u $endpoint"
+        docker exec -t payment-distributor-verifier bash -c "solana config set -u $endpoint --keypair /app/keypairs/fee-payer.json"
         
-        # Run the verification command with verbose output
-        $verifyCommand = "docker exec -t payment-distributor-verifier bash -c 'cd /app && echo y | RUST_BACKTRACE=1 solana-verify verify-from-repo -u $endpoint --program-id $programId $RepoUrl --library-name $LibraryName --remote'"
+        # Check fee payer balance and airdrop if needed
+        Write-Host "Checking fee payer balance..."
+        $balanceOutput = docker exec -t payment-distributor-verifier bash -c "solana balance -k /app/keypairs/fee-payer.json"
+        
+        if ($balanceOutput -match "(\d+\.?\d*)\s+SOL") {
+            $balance = [double]$Matches[1]
+            Write-Host "Fee payer balance: $balance SOL"
+            
+            if ($balance -lt 0.5 -and $Airdrop) {
+                Write-Host "Fee payer balance is low. Requesting airdrop of $AirdropAmount SOL..."
+                docker exec -t payment-distributor-verifier bash -c "solana airdrop $AirdropAmount /app/keypairs/fee-payer.json"
+                
+                # Check balance again after airdrop
+                $balanceOutput = docker exec -t payment-distributor-verifier bash -c "solana balance -k /app/keypairs/fee-payer.json"
+                if ($balanceOutput -match "(\d+\.?\d*)\s+SOL") {
+                    $balance = [double]$Matches[1]
+                    Write-Host "New fee payer balance: $balance SOL"
+                }
+            } elseif ($balance -lt 0.5) {
+                Write-Host "Warning: Fee payer balance is low. Remote verification may fail." -ForegroundColor Yellow
+                Write-Host "Consider using the -Airdrop flag to request SOL automatically." -ForegroundColor Yellow
+                $proceed = Read-Host "Do you want to proceed anyway? (y/n)"
+                if ($proceed -ne "y") {
+                    exit 1
+                }
+            }
+        } else {
+            Write-Host "Could not determine fee payer balance." -ForegroundColor Yellow
+            if ($Airdrop) {
+                Write-Host "Requesting airdrop of $AirdropAmount SOL..."
+                docker exec -t payment-distributor-verifier bash -c "solana airdrop $AirdropAmount /app/keypairs/fee-payer.json"
+            }
+        }
+        
+        # Run the verification command with verbose output and fee payer
+        $verifyCommand = "docker exec -t payment-distributor-verifier bash -c 'cd /app && echo y | RUST_BACKTRACE=1 solana-verify verify-from-repo -u $endpoint --program-id $programId $RepoUrl --library-name $LibraryName --remote --keypair /app/keypairs/fee-payer.json'"
         
         if ($CommitHash) {
             $verifyCommand += " --commit-hash $CommitHash"
