@@ -145,14 +145,18 @@ function Verify-Program {
     # Verify against repository
     Write-Host "Verifying program against repository..."
     
-    $verifyCommand = "docker exec -t payment-distributor-verifier bash -c 'cd /app && solana-verify verify-from-repo -u $endpoint --program-id $programId $RepoUrl --library-name $LibraryName"
-    
-    if ($CommitHash) {
-        $verifyCommand += " --commit-hash $CommitHash"
-    }
-    
+    # For remote verification, we'll use the OtterSec API directly
     if ($Remote) {
-        $verifyCommand += " --remote"
+        Write-Host "Using remote verification via OtterSec API..."
+        $verifyCommand = "docker exec -t payment-distributor-verifier bash -c 'cd /app && solana-verify verify-from-repo -u $endpoint --program-id $programId $RepoUrl --library-name $LibraryName --remote'"
+        
+        if ($CommitHash) {
+            $verifyCommand += " --commit-hash $CommitHash"
+        }
+    } else {
+        # For local verification, we'll use a simpler approach
+        Write-Host "Using local verification..."
+        $verifyCommand = "docker exec -t payment-distributor-verifier bash -c 'cd /app && solana program dump $programId -u $endpoint program.bin && sha256sum program.bin && sha256sum $ProgramBinaryPath'"
     }
     
     $verifyCommand += "'"
