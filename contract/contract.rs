@@ -31,7 +31,7 @@ security_txt! {
     // Required fields
     name: "Project Simo Distribution",
     project_url: "https://projectsimo.io",
-    contacts: "discord:https://discord.gg/AFg9HAdM",
+    contacts: "discord:https://discord.gg/projectsimo",
     policy: "https://projectsimo.io/security-policy",
     
     // Optional fields
