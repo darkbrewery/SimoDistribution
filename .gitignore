@@ -8,6 +8,7 @@ target/
 *.bin
 program.bin
 src_contract.rs
+src/lib.rs
 
 # Rust specific
 .rustc_info.json
