@@ -14,7 +14,7 @@ use solana_program::{
 use solana_security_txt::security_txt;
 
 // Program ID - new ID from the generated keypair
-solana_program::declare_id!("DEQ3yVcLRNRfQboh3gFzeafLJBmjrwkcAcKnzajWmin3");
+solana_program::declare_id!("5gDfonY8oTxoMjtnKggi76BUrGrioZVhHPeM7BHeTF9o");
 
 // Constants as u8 to save space
 const TREASURY_PCT: u8 = 50;
@@ -31,9 +31,9 @@ security_txt! {
     // Required fields
     name: "Project Simo Distribution",
     project_url: "https://projectsimo.io",
-    contacts: "discord:https://discord.gg/AFg9HAdM",
+    contacts: "discord:https://discord.gg/projectsimo",
     policy: "https://projectsimo.io/security-policy",
-    
+
     // Optional fields
     preferred_languages: "en",
     source_code: "https://github.com/darkbrewery/SimoDistribution",
@@ -52,75 +52,70 @@ fn process_instruction(
     if instruction_data.len() < 8 {
         return Err(ProgramError::InvalidInstructionData);
     }
-    
+
     let amount = u64::from_le_bytes(instruction_data[0..8].try_into().unwrap());
     let has_first_referrer = instruction_data.get(8).map_or(false, |&flag| flag != 0);
     let has_second_referrer = instruction_data.get(9).map_or(false, |&flag| flag != 0);
-    
+
     // Extract accounts
     let iter = &mut accounts.iter();
     let payer = next_account_info(iter)?;
     let treasury = next_account_info(iter)?;
     let team = next_account_info(iter)?;
-    let first_referrer = if has_first_referrer { Some(next_account_info(iter)?) } else { None };
-    let second_referrer = if has_second_referrer { Some(next_account_info(iter)?) } else { None };
+    // Always extract both referrer accounts, regardless of flags
+    let first_referrer = next_account_info(iter)?;
+    let second_referrer = next_account_info(iter)?;
     let system_program = next_account_info(iter)?;
-    
+
     // Verify system program ID
     if *system_program.key != solana_program::system_program::ID {
         return Err(ProgramError::IncorrectProgramId);
     }
-    
+
     // Calculate amounts
     let treasury_amount = amount * u64::from(TREASURY_PCT) / 100;
-    
+
     let first_ref_amount = if has_first_referrer {
         (amount * u64::from(FIRST_REF_PCT) / 100).min(FIRST_REF_MAX)
     } else { 0 };
-    
-    let second_ref_amount = if has_second_referrer && has_first_referrer {
+
+    let second_ref_amount = if has_second_referrer {
         (amount * u64::from(SECOND_REF_PCT) / 100).min(SECOND_REF_MAX)
     } else { 0 };
-    
-    let second_ref_portion = if has_first_referrer && !has_second_referrer {
+
+    let second_ref_portion = if !has_second_referrer {
         (amount * u64::from(SECOND_REF_PCT) / 100).min(SECOND_REF_MAX)
     } else { 0 };
-    
+
     let team_amount = amount - treasury_amount - first_ref_amount - second_ref_amount + second_ref_portion;
-    
+
     // Transfers
     invoke(
         &system_instruction::transfer(payer.key, treasury.key, treasury_amount),
         &[payer.clone(), treasury.clone(), system_program.clone()],
     )?;
-    
+
     invoke(
         &system_instruction::transfer(payer.key, team.key, team_amount),
         &[payer.clone(), team.clone(), system_program.clone()],
     )?;
-    
-    if let Some(first_ref) = first_referrer {
-        if first_ref_amount > 0 {
-            invoke(
-                &system_instruction::transfer(payer.key, first_ref.key, first_ref_amount),
-                &[payer.clone(), first_ref.clone(), system_program.clone()],
-            )?;
-        }
+
+    // Only transfer to first referrer if the flag is set and amount is positive
+    if has_first_referrer && first_ref_amount > 0 {
+        invoke(
+            &system_instruction::transfer(payer.key, first_referrer.key, first_ref_amount),
+            &[payer.clone(), first_referrer.clone(), system_program.clone()],
+        )?;
     }
-    
-    if let Some(second_ref) = second_referrer {
-        if second_ref_amount > 0 {
-            invoke(
-                &system_instruction::transfer(payer.key, second_ref.key, second_ref_amount),
-                &[payer.clone(), second_ref.clone(), system_program.clone()],
-            )?;
-        }
+
+    // Only transfer to second referrer if the flag is set and amount is positive
+    if has_second_referrer && second_ref_amount > 0 {
+        invoke(
+            &system_instruction::transfer(payer.key, second_referrer.key, second_ref_amount),
+            &[payer.clone(), second_referrer.clone(), system_program.clone()],
+        )?;
     }
-    
+
     Ok(())
 }
-
-
-
-
 
