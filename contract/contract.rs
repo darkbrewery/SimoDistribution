@@ -62,8 +62,9 @@ fn process_instruction(
     let payer = next_account_info(iter)?;
     let treasury = next_account_info(iter)?;
     let team = next_account_info(iter)?;
-    let first_referrer = if has_first_referrer { Some(next_account_info(iter)?) } else { None };
-    let second_referrer = if has_second_referrer { Some(next_account_info(iter)?) } else { None };
+    // Always extract both referrer accounts, regardless of flags
+    let first_referrer = next_account_info(iter)?;
+    let second_referrer = next_account_info(iter)?;
     let system_program = next_account_info(iter)?;
 
     // Verify system program ID
@@ -99,22 +100,20 @@ fn process_instruction(
         &[payer.clone(), team.clone(), system_program.clone()],
     )?;
 
-    if let Some(first_ref) = first_referrer {
-        if first_ref_amount > 0 {
-            invoke(
-                &system_instruction::transfer(payer.key, first_ref.key, first_ref_amount),
-                &[payer.clone(), first_ref.clone(), system_program.clone()],
-            )?;
-        }
+    // Only transfer to first referrer if the flag is set and amount is positive
+    if has_first_referrer && first_ref_amount > 0 {
+        invoke(
+            &system_instruction::transfer(payer.key, first_referrer.key, first_ref_amount),
+            &[payer.clone(), first_referrer.clone(), system_program.clone()],
+        )?;
     }
 
-    if let Some(second_ref) = second_referrer {
-        if second_ref_amount > 0 {
-            invoke(
-                &system_instruction::transfer(payer.key, second_ref.key, second_ref_amount),
-                &[payer.clone(), second_ref.clone(), system_program.clone()],
-            )?;
-        }
+    // Only transfer to second referrer if the flag is set and amount is positive
+    if has_second_referrer && second_ref_amount > 0 {
+        invoke(
+            &system_instruction::transfer(payer.key, second_referrer.key, second_ref_amount),
+            &[payer.clone(), second_referrer.clone(), system_program.clone()],
+        )?;
     }
 
     Ok(())
