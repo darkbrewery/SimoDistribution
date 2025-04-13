@@ -9,12 +9,10 @@ use solana_program::{
     program_error::ProgramError,
 };
 
-// Only include security_txt if not disabling the entrypoint
-#[cfg(not(feature = "no-entrypoint"))]
 use solana_security_txt::security_txt;
 
 // Program ID - new ID from the generated keypair
-solana_program::declare_id!("5gDfonY8oTxoMjtnKggi76BUrGrioZVhHPeM7BHeTF9o");
+solana_program::declare_id!("9bMPbnvKob677vSELz9gwCMiiwofQ4ZQxaBR7iEDwPtV");
 
 // Constants as u8 to save space
 const TREASURY_PCT: u8 = 50;
@@ -26,18 +24,13 @@ const SECOND_REF_MAX: u64 = 50_000_000;
 // Use the entrypoint! macro instead of manual entrypoint
 solana_program::entrypoint!(process_instruction);
 
-#[cfg(not(feature = "no-entrypoint"))]
 security_txt! {
-    // Required fields
     name: "Project Simo Distribution",
     project_url: "https://projectsimo.io",
     contacts: "discord:https://discord.gg/projectsimo",
     policy: "https://projectsimo.io/security-policy",
-
-    // Optional fields
     preferred_languages: "en",
-    source_code: "https://github.com/darkbrewery/SimoDistribution",
-    acknowledgements: "Thanks to Neodyme for security tools"
+    source_code: "https://github.com/darkbrewery/SimoDistribution"
 }
 
 // Add inline attribute to encourage compiler to inline this function
@@ -62,6 +55,7 @@ fn process_instruction(
     let payer = next_account_info(iter)?;
     let treasury = next_account_info(iter)?;
     let team = next_account_info(iter)?;
+
     // Always extract both referrer accounts, regardless of flags
     let first_referrer = next_account_info(iter)?;
     let second_referrer = next_account_info(iter)?;
@@ -118,4 +112,8 @@ fn process_instruction(
 
     Ok(())
 }
+
+
+
+
 
