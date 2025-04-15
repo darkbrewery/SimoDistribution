@@ -12,7 +12,7 @@ use solana_program::{
 use solana_security_txt::security_txt;
 
 // Program ID - new ID from the generated keypair
-solana_program::declare_id!("9bMPbnvKob677vSELz9gwCMiiwofQ4ZQxaBR7iEDwPtV");
+solana_program::declare_id!("6CGfhGv77UGNVXHYAi3hZJDozf2D7c6cagRC45e7WY7z");
 
 // Constants as u8 to save space
 const TREASURY_PCT: u8 = 50;
@@ -77,11 +77,7 @@ fn process_instruction(
         (amount * u64::from(SECOND_REF_PCT) / 100).min(SECOND_REF_MAX)
     } else { 0 };
 
-    let second_ref_portion = if !has_second_referrer {
-        (amount * u64::from(SECOND_REF_PCT) / 100).min(SECOND_REF_MAX)
-    } else { 0 };
-
-    let team_amount = amount - treasury_amount - first_ref_amount - second_ref_amount + second_ref_portion;
+    let team_amount = amount - treasury_amount - first_ref_amount - second_ref_amount;
 
     // Transfers
     invoke(
@@ -112,6 +108,8 @@ fn process_instruction(
 
     Ok(())
 }
+
+
 
 
 
